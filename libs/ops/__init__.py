@@ -1,3 +1,3 @@
 from .vector import Vector
 from .matrix import Matrix
-import utils
+from . import utils
