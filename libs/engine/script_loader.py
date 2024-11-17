@@ -13,8 +13,16 @@ class ScriptLoader:
         self.translations = []
 
     def read_script(self): 
-        with open(self.filename, 'r') as file:
-            lines = [line.strip() for line in file if line.strip()]
+        try:
+            with open(self.filename, 'r') as file:
+                lines = [line.strip() for line in file if line.strip()]
+        except FileNotFoundError:
+            print(f"Error: The file '{self.filename}' does not exist.")
+            return
+        except IOError as e:
+            print(f"Error: Cannot read the file. Details: {e}")
+            return
+
         data = [line.split() for line in lines]
         # Check input format
         if len(data[0]) != 2: 
