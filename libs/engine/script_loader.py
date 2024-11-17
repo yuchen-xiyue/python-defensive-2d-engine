@@ -39,7 +39,7 @@ class ScriptLoader:
                 RegularPolygon(num_sides=int(values[0]), radius=1.)
                 )
             self.transforms.append(
-                rotation_matrix(float(values[3])*PI/180) * scaling_matrix(float(values[1]), float(values[2]))
+                scaling_matrix(float(values[1]), float(values[2])) * rotation_matrix(float(values[3])*PI/180)
                 )
             self.translations.append(
                 Vector([float(values[4]), float(values[5])])
