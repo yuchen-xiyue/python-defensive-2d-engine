@@ -45,7 +45,13 @@ class ScriptLoader:
                 Vector([float(values[4]), float(values[5])])
             )
             
-        return
+        return self.height, self.width
+    
+    def get_shapes(self): 
+        shapes = []
+        for i, shape in enumerate(self.shapes): 
+            shapes.append(shape.transform(self.transforms[i]).translate(self.translations[i]))
+        return shapes
     
     def __len__(self): 
         return len(self.shapes)

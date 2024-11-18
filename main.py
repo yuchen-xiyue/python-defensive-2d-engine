@@ -11,11 +11,12 @@ def main():
 
     script_path = os.path.join(SCRIPT_DIRECTORY, args.script)
     script_loader = engine.ScriptLoader(script_path)
-    script_loader.read_script()
+    height, width = script_loader.read_script()
+    shapes = script_loader.get_shapes()
 
-    buffer = engine.Buffer(script_loader.height, script_loader.width)
+    buffer = engine.Buffer(height, width)
 
-    for shape in script_loader: 
+    for shape in shapes: 
         shape.draw(buffer)
 
     buffer.display('square')
