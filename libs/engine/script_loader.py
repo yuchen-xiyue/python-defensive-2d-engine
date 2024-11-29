@@ -6,43 +6,62 @@ class ScriptLoader:
     def __init__(self, filename) -> None:
         self.filename = filename
         self.width, self.height = 0, 0
-        self.num_shapes   = 0  
         self.shapes       = []
-        self.transforms   = []
-        self.translations = []
+
+    @staticmethod
+    def input_format_check(line, idx): 
+        if idx == 0: 
+            if len(line) != 2: 
+                raise ValueError(f"The first line of script should specify the window size. ")
+            else: 
+                return
+        elif idx > 0: 
+            if len(line) != 6: 
+                raise ValueError(f"Invalid script in line {idx+1}. ")
+            else:
+                return
+
 
     def read_script(self) -> bool: 
+        # Fatal problem: script not found
         try:
             with open(file=self.filename, mode='r') as file:
-                lines = [line.strip() for line in file if line.strip()]
+                str_lines = [line.strip() for line in file if line.strip()]
         except FileNotFoundError:
             print(f"Error: The file '{self.filename}' does not exist.")
             return False
         except IOError as e:
             print(f"Error: Cannot read the file. Details: {e}")
             return False
-
-        data = [line.split() for line in lines]
-        # Check input format
-        if len(data[0]) != 2: 
-            raise ValueError(f"The first line of script should specify the window size. ")
-        for i in range(1, len(data)-1): 
-            if len(data[i]) != 6: 
-                raise ValueError(f"Invalid script in line {i+1}. ")
+        # convert raw string into data
+        data_lines = [line.split() for line in str_lines]
+        num_lines = len(data_lines)
         # First line specifies the window size
-        self.height, self.width = int(data[0][0]), int(data[0][1])
-        for values in data[1: ]: 
+        try: 
+            ScriptLoader.input_format_check(data_lines[0], 0)
+        except Exception as e:
+            print(f"Error in reading script: {e}")
+        else:
+            self.height, self.width = int(data_lines[0][0]), int(data_lines[0][1])
+        for idx in range(1, num_lines):                         
+            try: 
+                ScriptLoader.input_format_check(data_lines[idx], idx)
+            except Exception as e:
+                print(f"Error in reading script: {e}")
+                # Skip incorrect line
+                continue
+
             # data format: n-sides, scale-x, scale-y, rot-degree, position-x, position-y
-            self.num_shapes += 1
-            self.shapes.append(
-                RegularPolygon(num_sides=int(values[0]), radius=1.)
+            num_sides, sx, sy, rot, px, py = data_lines[idx]
+            # initialize a uniform shape
+            shape = RegularPolygon(num_sides=int(num_sides), radius=1.)
+            # apply affine transformation
+            shape.affine_transform(
+                    transform_matrix=Matrix.scaling_matrix(a=float(sx), b=float(sy)) * Matrix.rotation_matrix(float(rot)*PI/180), 
+                    translation_vector=Vector(elements=[float(px), float(py)])
                 )
-            self.transforms.append(
-                Matrix.scaling_matrix(a=float(values[1]), b=float(values[2])) * Matrix.rotation_matrix(float(values[3])*PI/180)
-                )
-            self.translations.append(
-                Vector(elements=[float(values[4]), float(values[5])])
-            )
+            # append to list
+            self.shapes.append(shape)
             
         return True
     
@@ -50,13 +69,10 @@ class ScriptLoader:
         return self.height, self.width
     
     def get_shapes(self) -> list[RegularPolygon]: 
-        shapes = []
-        for i, shape in enumerate(self.shapes): 
-            shapes.append(shape.transform(self.transforms[i]).translate(self.translations[i]))
-        return shapes
+        return self.shapes
     
     def __len__(self) -> int: 
         return len(self.shapes)
     
     def __getitem__(self, index) -> RegularPolygon: 
-        return self.shapes[index].transform(self.transforms[index]).translate(self.translations[index])
+        return self.shapes[index]

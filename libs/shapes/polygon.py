@@ -13,19 +13,17 @@ class Polygon(Shape):
             self.vertices.append(Vector(vertex))
         self.is_closed = is_closed
 
-    def translate(self, input_: Vector): 
-        super().translate(input_)
+    def affine_transform(self, transform_matrix: Matrix, translation_vector: Vector): 
+        try:
+            super().affine_transform(transform_matrix, translation_vector)
+        except Exception as e:
+            print(e)
+            return False
+        
         for i in range(len(self.vertices)): 
-            self.vertices[i] = self.vertices[i] + input_
+            self.vertices[i] = transform_matrix * self.vertices[i] + translation_vector
 
-        return self
-    
-    def transform(self, input_: Matrix): 
-        super().transform(input_)
-        for i in range(len(self.vertices)): 
-            self.vertices[i] = input_ * self.vertices[i]
-
-        return self
+        return True
     
     def draw(self, canvas):
         super().draw(canvas)
