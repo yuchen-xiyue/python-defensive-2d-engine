@@ -1,10 +1,9 @@
 from math import pi as PI
 from ..shapes import RegularPolygon
-from ..ops import Vector
-from ..ops.utils import rotation_matrix, scaling_matrix
+from ..ops import Vector, Matrix
 
 class ScriptLoader:
-    def __init__(self, filename):
+    def __init__(self, filename) -> None:
         self.filename = filename
         self.width, self.height = 0, 0
         self.num_shapes   = 0  
@@ -12,16 +11,16 @@ class ScriptLoader:
         self.transforms   = []
         self.translations = []
 
-    def read_script(self): 
+    def read_script(self) -> bool: 
         try:
-            with open(self.filename, 'r') as file:
+            with open(file=self.filename, mode='r') as file:
                 lines = [line.strip() for line in file if line.strip()]
         except FileNotFoundError:
             print(f"Error: The file '{self.filename}' does not exist.")
-            return
+            return False
         except IOError as e:
             print(f"Error: Cannot read the file. Details: {e}")
-            return
+            return False
 
         data = [line.split() for line in lines]
         # Check input format
@@ -39,22 +38,25 @@ class ScriptLoader:
                 RegularPolygon(num_sides=int(values[0]), radius=1.)
                 )
             self.transforms.append(
-                scaling_matrix(float(values[1]), float(values[2])) * rotation_matrix(float(values[3])*PI/180)
+                Matrix.scaling_matrix(a=float(values[1]), b=float(values[2])) * Matrix.rotation_matrix(float(values[3])*PI/180)
                 )
             self.translations.append(
-                Vector([float(values[4]), float(values[5])])
+                Vector(elements=[float(values[4]), float(values[5])])
             )
             
+        return True
+    
+    def get_size(self) -> tuple[int, int]: 
         return self.height, self.width
     
-    def get_shapes(self): 
+    def get_shapes(self) -> list[RegularPolygon]: 
         shapes = []
         for i, shape in enumerate(self.shapes): 
             shapes.append(shape.transform(self.transforms[i]).translate(self.translations[i]))
         return shapes
     
-    def __len__(self): 
+    def __len__(self) -> int: 
         return len(self.shapes)
     
-    def __getitem__(self, index): 
+    def __getitem__(self, index) -> RegularPolygon: 
         return self.shapes[index].transform(self.transforms[index]).translate(self.translations[index])

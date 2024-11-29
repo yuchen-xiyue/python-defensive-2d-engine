@@ -1,9 +1,9 @@
 from . import Vector
 
 class Matrix:
-    def __init__(self, rows: any):
+    def __init__(self, rows) -> None:
         # Copying matrix
-        if isinstance(rows, Vector):
+        if isinstance(rows, Matrix):
             self.data = [[e for e in row] for row in rows.data]
             self.num_rows = rows.num_rows
             self.num_cols = rows.num_cols
@@ -29,102 +29,159 @@ class Matrix:
         self.num_rows = len(rows)
         self.num_cols = row_length
 
-    @property
-    def dim(self): 
-        return (self.num_rows, self.num_cols)
-    
-    def transpose(self): 
-        transposed = [
-            [ self.rows[j][i] for j in range(self.num_rows) ] 
-            for i in range(self.num_cols)
-            ]
-        return Matrix(transposed)
-    
-    def row(self, index: int): 
-        """Get the i-th row vector"""
-        return Vector(self.data[index])
-    
-    def col(self, index: int): 
-        """Get the j-th column vector"""
-        return Vector([row[index] for row in self.data])
-
-    def dimension_check(self, input_: any, op_name: str):
+    @staticmethod
+    def dimension_check(obj, input_, op_name: str) -> None:
         """Check the dimension for operations with non-numeric inputs"""
         # Element-wise operation dimensions check
         if   op_name in ["addition", "substraction", "element-wise production"]:
             if not isinstance(input_, Matrix): 
                 raise TypeError(f"Operation {op_name} not supported between Matrix and {type(input_)}")
-            if self.dim[0] != input_.dim[0] or self.dim[1] != input_.dim[1]: 
-                raise ValueError(f"Dimension mismatch for {op_name}: {self.dim[0]}x{self.dim[1]} with {input_.dim}-vector. ")
+            if obj.dim[0] != input_.dim[0] or obj.dim[1] != input_.dim[1]: 
+                raise ValueError(f"Dimension mismatch for {op_name}: {obj.dim[0]}x{obj.dim[1]} with {input_.dim}-vector. ")
         # Matrix * Vector
         elif op_name in ["matrix multiply vector"]:
-            if self.dim[1] != input_.dim: 
-                raise ValueError(f"Dimension mismatch for {op_name}: {self.dim[0]}x{self.dim[1]} with {input_.dim}-vector. ")
+            if obj.dim[1] != input_.dim: 
+                raise ValueError(f"Dimension mismatch for {op_name}: {obj.dim[0]}x{obj.dim[1]} with {input_.dim}-vector. ")
         # Vector * Matrix
         elif op_name in ["vector multiply matrix"]:
-            if self.dim[0] != input_.dim: 
-                raise ValueError(f"Dimension mismatch for {op_name}: {input_.dim}-vector with {self.dim[0]}x{self.dim[1]}. ")
+            if obj.dim[0] != input_.dim: 
+                raise ValueError(f"Dimension mismatch for {op_name}: {input_.dim}-vector with {obj.dim[0]}x{obj.dim[1]}. ")
         # Matrix * Matrix
         elif op_name in ["matrix multiply matrix"]: 
-            if self.dim[1] != input_.dim[0]: 
-                raise ValueError(f"Dimension mismatch for {op_name}: {self.dim[0]}x{self.dim[1]} with {input_.dim[0]}x{input_.dim[1]}-matrix. ")
+            if obj.dim[1] != input_.dim[0]: 
+                raise ValueError(f"Dimension mismatch for {op_name}: {obj.dim[0]}x{obj.dim[1]} with {input_.dim[0]}x{input_.dim[1]}-matrix. ")
         else: 
             raise ValueError(f"Invalid operation name: {op_name}.")
         
-        return True
     
-    def __add__(self, input_: any): 
+    @staticmethod
+    def identity_matrix(dim: int): 
+        Matrix.dimension_check(obj=None, input_=(dim, dim), op_name="creating identity matrix")
+
+        return Matrix(rows=[
+            [ 1 if i == j else 0 for j in range(dim) ] for i in range(dim)
+        ])
+    
+    @staticmethod
+    def one_matrix(dim: tuple[int, int]): 
+        Matrix.dimension_check(obj=None, input_=dim, op_name="creating one matrix")
+
+        return Matrix(rows=[
+            [1 for _ in range(dim[1])] for _ in range(dim[0])
+        ])
+    
+    @staticmethod
+    def zero_matrix(dim: tuple[int, int]): 
+        Matrix.dimension_check(obj=None, input_=dim, op_name="creating zero matrix")
+
+        return Matrix(rows=[
+            [0 for _ in range(dim[1])] for _ in range(dim[0])
+        ])
+    
+    @staticmethod
+    def expend_vector(vector: Vector, axis: int, dim: int): 
+        """Expand vector to matrix along given axis to make a matrix"""
+        if not isinstance(dim, int) or dim <= 0: 
+            raise ValueError(f"Invalid dimension input {dim}. ")
+
+        if axis == 0: 
+            result = Matrix(rows=[vector.data for _ in range(dim)])
+        elif axis == 1 or axis == -1:
+            result = Matrix(rows=[[vector.data[i]] * dim for i in range(dim)])
+        else: 
+            raise ValueError(f"Invalid axis number {axis} to expand. ")
+
+        return result
+    
+    @staticmethod
+    def rotation_matrix(theta: float): 
+        from math import sin, cos
+        result = [
+            [cos(theta), -sin(theta)],
+            [sin(theta),  cos(theta)]
+            ]
+        return Matrix(rows=result)
+    
+    @staticmethod
+    def scaling_matrix(a: float, b: float): 
+        result = [
+            [a, 0.],
+            [0., b]
+            ]
+        return Matrix(rows=result)
+
+    @property
+    def dim(self) -> tuple[int, int]: 
+        return (self.num_rows, self.num_cols)
+    
+    def transpose(self): 
+        transposed = [
+            [ self.data[j][i] for j in range(self.num_rows) ] 
+            for i in range(self.num_cols)
+            ]
+        return Matrix(rows=transposed)
+    
+    def row(self, index: int) -> Vector: 
+        """Get the i-th row vector"""
+        return Vector(elements=self.data[index])
+    
+    def col(self, index: int) -> Vector: 
+        """Get the j-th column vector"""
+        return Vector(elements=[row[index] for row in self.data])
+
+    
+    def __add__(self, input_): 
         """Add by another matrix or a number"""
         # Add a number
         if isinstance(input_, (int, float)): 
             result = [
-                [self[i][j] + input_ for j in range(self.num_cols)] 
+                [self.data[i][j] + input_ for j in range(self.num_cols)] 
                     for i in range(self.num_rows)
                 ]
-            return Matrix(result)
+            return Matrix(rows=result)
         # Add a matrix
-        self.dimension_check(input_, "addition")
+        Matrix.dimension_check(obj=self, input_=input_, op_name="addition")
         result = [
-            [self[i][j] + input_[i][j] for j in range(self.num_cols)] 
+            [self.data[i][j] + input_[i][j] for j in range(self.num_cols)] 
                 for i in range(self.num_rows)
             ]
-        return Matrix(result)
+        return Matrix(rows=result)
     
-    def __sub__(self, input_: any): 
+    def __sub__(self, input_): 
         """Substract another matrix or a number"""
         # Substract a number
         if isinstance(input_, (int, float)): 
             result = [
-                [self[i][j] - input_ for j in range(self.num_cols)] 
+                [self.data[i][j] - input_ for j in range(self.num_cols)] 
                     for i in range(self.num_rows)
                 ]
-            return Matrix(result)
+            return Matrix(rows=result)
         # Substract a matrix
-        self.dimension_check(input_, "substraction")
+        Matrix.dimension_check(obj=self, input_=input_, op_name="substraction")
         result = [
-            [self[i][j] - input_[i][j] for j in range(self.num_cols)] 
+            [self.data[i][j] - input_[i][j] for j in range(self.num_cols)] 
                 for i in range(self.num_rows)
             ]
-        return Matrix(result)
+        return Matrix(rows=result)
 
-    def __mul__(self, input_: any): 
+    def __mul__(self, input_): 
         # Scale by number
         if isinstance(input_, (int, float)): 
-            result = Matrix([
+            result = Matrix(rows=[
                 [ input_ * self.data[i][j] for j in range(self.num_cols) ]
                 for i in range(self.num_rows)
                 ])
         # right multiply a vector
         elif isinstance(input_, Vector): 
-            self.dimension_check(input_, "matrix multiply vector")
-            result = Vector([
-                self.row(i).dot_product(input_) for i in range(self.num_rows)
+            Matrix.dimension_check(obj=self, input_=input_, op_name="matrix multiply vector")
+            result = Vector(elements=[
+                self.row(index=i).dot_product(input_=input_) for i in range(self.num_rows)
             ])
         # right multiply a matrix
         elif isinstance(input_, Matrix): 
-            self.dimension_check(input_, "matrix multiply matrix")
-            result = Matrix([
-                [ self.row(i).dot_product(input_.col(j)) for j in range(input_.num_cols) ] 
+            Matrix.dimension_check(obj=self, input_=input_, op_name="matrix multiply matrix")
+            result = Matrix(rows=[
+                [ self.row(index=i).dot_product(input_=input_.col(index=j)) for j in range(input_.num_cols) ] 
                 for i in range(self.num_rows)
             ])
         else: 
@@ -132,24 +189,24 @@ class Matrix:
 
         return result
     
-    def __rmul__(self, input_: any): 
+    def __rmul__(self, input_): 
         # Scale by number
         if isinstance(input_, (int, float)): 
-            result = Matrix([
+            result = Matrix(rows=[
                 [ input_ * self.data[i][j] for j in range(self.num_cols) ]
                 for i in range(self.num_rows)
                 ])
         # left multiply a vector
         elif isinstance(input_, Vector): 
-            self.dimension_check(input_, "vector multiply matrix")
-            result = Vector([
-                self.col(i).dot_product(input_) for i in range(self.num_cols)
+            Matrix.dimension_check(obj=self, input_=input_, op_name="vector multiply matrix")
+            result = Vector(elements=[
+                self.col(index=i).dot_product(input_=input_) for i in range(self.num_cols)
             ])
         # left multiply a matrix
         elif isinstance(input_, Matrix): 
-            input_.dimension_check(self, "matrix multiply matrix")
-            result = Matrix([
-                [ input_.row(i).dot_product(self.col(j)) for j in range(self.num_cols) ] 
+            Matrix.dimension_check(obj=input_, input_=self, op_name="matrix multiply matrix")
+            result = Matrix(rows=[
+                [ input_.row(index=i).dot_product(input_=self.col(index=j)) for j in range(self.num_cols) ] 
                 for i in range(input_.num_rows)
             ])
         else: 
@@ -159,14 +216,14 @@ class Matrix:
     
     __radd__ = __add__
 
-    def elementwise_product(self, input_: any): 
-        self.dimension_check(input_, "element-wise production")
+    def elementwise_product(self, input_): 
+        Matrix.dimension_check(obj=self, input_=input_, op_name="element-wise production")
         result = [
-            [self[i][j] * input_[i][j] for j in range(self.num_cols)] 
+            [self.data[i][j] * input_[i][j] for j in range(self.num_cols)] 
                 for i in range(self.num_rows)
             ]
-        return Matrix(result)
+        return Matrix(rows=result)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Matrix{self.data}"
