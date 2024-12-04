@@ -1,5 +1,4 @@
 import os
-import traceback
 import argparse
 from datetime import datetime
 from libs import engine
@@ -33,14 +32,7 @@ def main() -> None:
     parser.add_argument("script", type=str, help="Type in your script filename. ")
     parser.add_argument("-l", "--filelogger", action='store_true', help="Create logger file. ")
     
-    try: 
-
-        args = parser.parse_args()
-    
-    except argparse.ArgumentError as e: 
-
-        print(e)
-        print(traceback.format_exc())
+    args = parser.parse_args()
 
     # initiate logger
     logger = create_exception_logger(args.filelogger)
