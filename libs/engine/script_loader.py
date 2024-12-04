@@ -1,3 +1,5 @@
+import traceback
+
 from math import pi as PI
 from ..shapes import RegularPolygon
 from ..ops import Vector, Matrix
@@ -5,7 +7,7 @@ from ..ops import Vector, Matrix
 class ScriptLoader:
     def __init__(self, filename) -> None:
         self.filename = filename
-        self.width, self.height = 0, 0
+        self.width, self.height = 10, 10 # default values
         self.shapes       = []
 
     @staticmethod
@@ -13,41 +15,59 @@ class ScriptLoader:
         if idx == 0: 
             if len(line) != 2: 
                 raise ValueError(f"The first line of script should specify the window size. ")
-            else: 
-                return
+        
+            if not isinstance(line[0], int) or not isinstance(line[1], int): 
+                raise TypeError(f"Window size parameters should be integer and integer, got {type(line[0])} and {type(line[1])}. ")
+
+            if line[0] <= 0 or line[1] <= 0: 
+                raise ValueError(f"Window size parameters should be integers greater than zero, got {line[0]} and {line[1]}. ")
+        
         elif idx > 0: 
             if len(line) != 6: 
-                raise ValueError(f"Invalid script in line {idx+1}. ")
-            else:
-                return
+                raise ValueError(f"Invalid script in line {idx+1}: incorrect number of parameters. ")
+            if any(not isinstance(x, (int, float)) for x in line): 
+                raise ValueError(f"Invalid script in line {idx+1}: invalid input. ")
+            
 
-
-    def read_script(self) -> bool: 
-        # Fatal problem: script not found
+    def read_script(self): 
+        # read script
+        exceptions, traceback_details = [], []
         try:
             with open(file=self.filename, mode='r') as file:
                 str_lines = [line.strip() for line in file if line.strip()]
-        except FileNotFoundError:
-            print(f"Error: The file '{self.filename}' does not exist.")
-            return False
+        except FileNotFoundError as e:
+            exceptions.append(f"Error: The file '{self.filename}' does not exist.")
+            traceback_details.append(traceback.format_exc())
+            return exceptions, traceback_details
         except IOError as e:
-            print(f"Error: Cannot read the file. Details: {e}")
-            return False
+            exceptions.append(f"Error: Cannot read the file. Details: {e}")
+            traceback_details.append(traceback.format_exc())
+            return exceptions, traceback_details
+        
         # convert raw string into data
-        data_lines = [line.split() for line in str_lines]
+        data_lines = [[eval(x) for x in line.split()] for line in str_lines]
         num_lines = len(data_lines)
         # First line specifies the window size
         try: 
             ScriptLoader.input_format_check(data_lines[0], 0)
-        except Exception as e:
-            print(f"Error in reading script: {e}")
+        # Handle the blank script
+        except IndexError: 
+            exceptions.append(f"Error in reading script: blank file as input. ")
+            traceback_details.append(traceback.format_exc())
+            return exceptions, traceback_details
+        except (ValueError, TypeError) as e:
+            exceptions.append(f"Error in reading script: {e}")
+            traceback_details.append(traceback.format_exc())
+            return exceptions, traceback_details
         else:
             self.height, self.width = int(data_lines[0][0]), int(data_lines[0][1])
+        # initiate each shape
         for idx in range(1, num_lines):                         
             try: 
                 ScriptLoader.input_format_check(data_lines[idx], idx)
             except Exception as e:
-                print(f"Error in reading script: {e}")
+                exceptions.append(f"Error in reading script: {e}")
+                traceback_details.append(traceback.format_exc())
                 # Skip incorrect line
                 continue
 
@@ -63,7 +83,7 @@ class ScriptLoader:
             # append to list
             self.shapes.append(shape)
             
-        return True
+        return exceptions, traceback_details
     
     def get_size(self) -> tuple[int, int]: 
         return self.height, self.width
